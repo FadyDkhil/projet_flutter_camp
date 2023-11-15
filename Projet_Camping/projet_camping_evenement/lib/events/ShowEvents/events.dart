@@ -5,6 +5,8 @@ import 'package:projet_camping_evenement/events/ShowEvents/events_info.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+enum SearchCriteria { byName, byLocation }
+
 class Events extends StatefulWidget {
   const Events({Key? key}) : super(key: key);
 
@@ -15,11 +17,18 @@ class Events extends StatefulWidget {
 class _EventsState extends State<Events> {
   late Future<void> _fetchedEvents;
   final List<EventsClass> _events = [];
+  final TextEditingController _searchController = TextEditingController();
+  SearchCriteria selectedSearchCriteria = SearchCriteria.byLocation;
 
-  Future<void> fetchEvents() async {
+  Future<void> fetchEvents({String? location, String? name}) async {
     try {
-      final response =
-          await http.get(Uri.http("localhost:3000", "/fady/events"));
+      final Uri uri = Uri.http("localhost:3000", "/fady/events", {
+        if (selectedSearchCriteria == SearchCriteria.byLocation)
+          "location": location,
+        if (selectedSearchCriteria == SearchCriteria.byName) "name": name,
+      });
+
+      final response = await http.get(uri);
 
       if (response.statusCode == 200) {
         final dynamic jsonResponse = json.decode(response.body);
@@ -27,28 +36,26 @@ class _EventsState extends State<Events> {
         if (jsonResponse is Map && jsonResponse.containsKey("events")) {
           final List<dynamic> eventsFromServer = jsonResponse["events"];
 
-          // Clear existing events before adding new ones.
           _events.clear();
 
           eventsFromServer.forEach((element) {
             _events.add(EventsClass(
-                element["name"],
-                element["location"],
-                element["description"],
-                element["startDate"],
-                element["endDate"],
-                element["maxPeople"],
-                element["userID"]));
+              element["name"],
+              element["location"],
+              element["description"],
+              element["startDate"],
+              element["endDate"],
+              element["maxPeople"],
+              element["userID"],
+            ));
           });
         } else {
           print("Invalid response format: Missing 'events' key or not a Map.");
         }
       } else {
-        // Handle error cases here.
         print("Failed to load events. Status code: ${response.statusCode}");
       }
     } catch (error) {
-      // Handle network or other errors.
       print("Error fetching events: $error");
     }
   }
@@ -61,65 +68,124 @@ class _EventsState extends State<Events> {
 
   @override
   Widget build(BuildContext context) {
-    // Recreate _fetchedEvents when the widget is rebuilt
-    _fetchedEvents = fetchEvents();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Events"),
       ),
-      body: FutureBuilder(
-        future: _fetchedEvents,
-        builder: (BuildContext context, AsyncSnapshot<void> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          } else if (snapshot.hasError) {
-            return Center(
-              child: Text("Error: ${snapshot.error}"),
-            );
-          } else {
-            return GridView.builder(
-              itemCount: _events.length,
-              itemBuilder: (BuildContext context, int index) {
-                return GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (BuildContext context) => EventDetails(
+      body: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text("Filter: "),
+              Radio(
+                value: SearchCriteria.byLocation,
+                groupValue: selectedSearchCriteria,
+                onChanged: (SearchCriteria? value) {
+                  setState(() {
+                    selectedSearchCriteria = value!;
+                  });
+                },
+              ),
+              const Text('Location'),
+              Radio(
+                value: SearchCriteria.byName,
+                groupValue: selectedSearchCriteria,
+                onChanged: (SearchCriteria? value) {
+                  setState(() {
+                    selectedSearchCriteria = value!;
+                  });
+                },
+              ),
+              const Text('Name'),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: selectedSearchCriteria == SearchCriteria.byLocation
+                    ? "Search by location"
+                    : "Search by name",
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: () {
+                    _fetchedEvents = fetchEvents(
+                      location:
+                          selectedSearchCriteria == SearchCriteria.byLocation
+                              ? _searchController.text
+                              : null,
+                      name: selectedSearchCriteria == SearchCriteria.byName
+                          ? _searchController.text
+                          : null,
+                    );
+                    setState(() {});
+                  },
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder(
+              future: _fetchedEvents,
+              builder: (BuildContext context, AsyncSnapshot<void> snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Text("Error: ${snapshot.error}"),
+                  );
+                } else {
+                  return GridView.builder(
+                    itemCount: _events.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      return GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (BuildContext context) => EventDetails(
+                              _events[index].name,
+                              _events[index].location,
+                              _events[index].description,
+                              _events[index].startDate,
+                              _events[index].endDate,
+                              _events[index].maxPeople,
+                              _events[index].userID,
+                            ),
+                          ),
+                        ),
+                        child: EventsInfo(
                           _events[index].name,
                           _events[index].location,
                           _events[index].description,
                           _events[index].startDate,
                           _events[index].endDate,
                           _events[index].maxPeople,
-                          _events[index].userID),
+                          _events[index].userID,
+                        ),
+                      );
+                    },
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      mainAxisExtent: 100,
+                      mainAxisSpacing: 5,
+                      crossAxisSpacing: 5,
                     ),
-                  ),
-                  child: EventsInfo(
-                      _events[index].name,
-                      _events[index].location,
-                      _events[index].description,
-                      _events[index].startDate,
-                      _events[index].endDate,
-                      _events[index].maxPeople,
-                      _events[index].userID),
-                );
+                  );
+                }
               },
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisExtent: 100,
-                mainAxisSpacing: 5,
-                crossAxisSpacing: 5,
-              ),
-            );
-          }
-        },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.pushReplacementNamed(context, "/home");
+          _fetchedEvents = fetchEvents();
+          setState(() {});
         },
         child: const Icon(Icons.refresh),
       ),
@@ -136,9 +202,18 @@ class EventsClass {
   String maxPeople;
   String userID;
 
-  EventsClass(this.name, this.location, this.description, this.startDate,
-      this.endDate, this.maxPeople, this.userID);
+  EventsClass(
+    this.name,
+    this.location,
+    this.description,
+    this.startDate,
+    this.endDate,
+    this.maxPeople,
+    this.userID,
+  );
 }
+
+
 
 // // ----------- STATIQUE
 

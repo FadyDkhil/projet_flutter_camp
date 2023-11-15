@@ -1,14 +1,33 @@
 const Event = require('../models/Events.js')
 
-const getAllEvents = async (req,res) => {
-    try{
-        const events = await Event.find({})
-        res.status(200).json({events})
-    }catch(err){
-        res.status(500).json({msg: err})
+const getAllEvents = async (req, res) => {
+    try {
+        let filter = {}; // Default filter to get all events
+
+        // Check if the 'location' or 'name' query parameter is present
+        if (req.query.location) {
+            filter = { location: req.query.location };
+        } else if (req.query.name) {
+            filter = { name: { $regex: new RegExp(req.query.name, 'i') } };
+        }
+
+        const events = await Event.find(filter);
+
+        res.status(200).json({ events });
+    } catch (err) {
+        res.status(500).json({ msg: err });
     }
-    
 }
+
+// const getAllEvents = async (req,res) => {
+//     try{
+//         const events = await Event.find({})
+//         res.status(200).json({events})
+//     }catch(err){
+//         res.status(500).json({msg: err})
+//     }
+    
+// }
 const addOneEvent = async (req,res) => {
     try{
         const event = await Event.create(req.body)
