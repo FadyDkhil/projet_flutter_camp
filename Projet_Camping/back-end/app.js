@@ -9,7 +9,7 @@ require('dotenv').config()
 const events = require('./routes/EventsRoutes.js')
 const users = require('./routes/UsersRoutes.js')
 const campingMaterial = require('./routes/CampingMaterialRoutes.js')
-
+const participated = require('./routes/ParticipatedRoutes.js')
 //middleware
 app.use(cors())
 app.use(express.static('./public'))
@@ -19,6 +19,7 @@ app.use(express.json())
 app.use('/fady/events', events)
 app.use('/fady/users', users)
 app.use('/material/campingMaterial', campingMaterial)
+app.use('/fady/participated', participated)
 
 
 const port = 3000

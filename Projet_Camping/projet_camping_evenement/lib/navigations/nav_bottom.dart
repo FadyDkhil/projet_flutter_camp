@@ -117,7 +117,7 @@ class _NavBottomState extends State<NavBottom> {
                 Text("Subscribed Events"),
               ]),
               onTap: () {
-                // Handle navigation to subscribed events
+                Navigator.pushNamed(context, "/events/followed");
               },
             ),
             ListTile(

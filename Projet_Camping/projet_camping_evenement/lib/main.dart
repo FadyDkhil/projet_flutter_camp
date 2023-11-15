@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:projet_camping_evenement/events/ShowEvents/participated_events.dart';
 import 'package:provider/provider.dart';
 import 'package:json_theme/json_theme.dart';
 import 'package:flutter/services.dart';
@@ -51,7 +52,8 @@ class MyApp extends StatelessWidget {
         "/settings": (BuildContext context) => const ProfileSettings(),
         "/shop": (BuildContext context) => const CampingMaterial(),
         "/my_shop": (BuildContext context) => const MyShop(),
-        "/shop/add": (BuildContext context) => const AddCampingMaterial()
+        "/shop/add": (BuildContext context) => const AddCampingMaterial(),
+        "/events/followed": (BuildContext context) => const ParticipatedEvents()
       },
     );
   }

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import 'dart:convert';
+import '../../user_provider.dart';
 
 class EventDetails extends StatefulWidget {
   final String _name;
@@ -17,11 +21,15 @@ class EventDetails extends StatefulWidget {
 }
 
 class _EventDetailsState extends State<EventDetails> {
+  late String userID;
   //late int _currentQuantity;
   @override
   void initState() {
     // _currentQuantity = widget._quantity;
     super.initState();
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
+      userID = Provider.of<UserProvider>(context, listen: false).userId ?? "-1";
+    });
   }
 
   @override
@@ -64,7 +72,51 @@ class _EventDetailsState extends State<EventDetails> {
               width: 250,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Map<String, dynamic> eventData = {
+                    "name": widget._name,
+                    "location": widget._location,
+                    "description": widget._description,
+                    "startDate": widget._startDate,
+                    "endDate": widget._endDate,
+                    "maxPeople": widget._maxPeople,
+                    "userID": userID,
+                  };
+
+                  Map<String, String> headers = {
+                    "Content-Type": "application/json",
+                  };
+                  http
+                      .post(
+                    Uri.http("localhost:3000", "/fady/participated"),
+                    headers: headers,
+                    body: json.encode(eventData),
+                  )
+                      .then((http.Response response) {
+                    if (response.statusCode == 201) {
+                      Navigator.pop(context);
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return const AlertDialog(
+                            title: Text("Information"),
+                            content: Text("Event Subscribed!"),
+                          );
+                        },
+                      );
+                    } else {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return const AlertDialog(
+                            title: Text("Error"),
+                            content: Text("An error occurred"),
+                          );
+                        },
+                      );
+                    }
+                  });
+                },
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
